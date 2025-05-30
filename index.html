@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Emotion Detection - Real-Time</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+<style>
+  /* Background gradient animation */
+  body {
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+    height: 100vh;
+    background: linear-gradient(270deg, #6a11cb, #2575fc, #6a11cb);
+    background-size: 600% 600%;
+    animation: GradientAnimation 15s ease infinite;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 2rem;
+    color: white;
+  }
+
+  @keyframes GradientAnimation {
+    0% {background-position: 0% 50%;}
+    50% {background-position: 100% 50%;}
+    100% {background-position: 0% 50%;}
+  }
+
+  h1 {
+    font-weight: 600;
+    margin-bottom: 1rem;
+    text-shadow: 1px 1px 5px rgba(0,0,0,0.3);
+  }
+
+  button {
+    background-color: #2575fc;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 25px;
+    color: white;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    box-shadow: 0 4px 8px rgba(37,117,252,0.5);
+    transition: background-color 0.3s ease;
+    margin-bottom: 1.5rem;
+  }
+
+  button:hover {
+    background-color: #1a54d1;
+  }
+
+  #webcam-container {
+    border: 3px solid rgba(255,255,255,0.4);
+    border-radius: 15px;
+    overflow: hidden;
+    width: 300px;
+    height: 300px;
+    box-shadow: 0 8px 15px rgba(0,0,0,0.3);
+    margin-bottom: 1rem;
+  }
+
+  #label-container {
+    font-size: 1.5rem;
+    font-weight: 600;
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.6);
+    min-height: 40px;
+  }
+</style>
+</head>
+<body>
+  <h1>Teachable Machine Emotion Detection</h1>
+  <button type="button" onclick="init()">Start Emotion Detection</button>
+  <div id="webcam-container"></div>
+  <div id="label-container">Waiting for detection...</div>
+
+<script type="text/javascript">
+  const URL = "./my_model/";
+  let model, webcam, labelContainer, maxPredictions;
+
+  const emojiMap = {
+    Happy: "😄",
+    Sad: "😢",
+    Angry: "😠",
+    Surprised: "😲",
+    Neutral: "😐",
+  };
+
+  async function init() {
+    const modelURL = URL + "model.json";
+    const metadataURL = URL + "metadata.json";
+
+    try {
+      model = await tmImage.load(modelURL, metadataURL);
+      maxPredictions = model.getTotalClasses();
+
+      const flip = true;
+      webcam = new tmImage.Webcam(300, 300, flip);
+      await webcam.setup();
+      await webcam.play();
+      window.requestAnimationFrame(loop);
+
+      document.getElementById("webcam-container").innerHTML = "";
+      document.getElementById("webcam-container").appendChild(webcam.canvas);
+
+      labelContainer = document.getElementById("label-container");
+      labelContainer.textContent = "Detecting emotions...";
+    } catch (error) {
+      alert("Error loading model or accessing webcam. Check console for details.");
+      console.error(error);
+    }
+  }
+
+  async function loop() {
+    webcam.update();
+    await predict();
+    window.requestAnimationFrame(loop);
+  }
+
+  async function predict() {
+    const prediction = await model.predict(webcam.canvas);
+
+    let highestProb = 0;
+    let topClass = "No clear emotion";
+
+    for (let i = 0; i < maxPredictions; i++) {
+      if (prediction[i].probability > highestProb) {
+        highestProb = prediction[i].probability;
+        topClass = prediction[i].className;
+      }
+    }
+
+    labelContainer.textContent = `${emojiMap[topClass] || ""} ${topClass}`;
+  }
+</script>
+</body>
+</html>
+
